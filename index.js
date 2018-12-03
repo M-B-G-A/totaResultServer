@@ -2,6 +2,9 @@ const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 require('dotenv').config();
 
+const startTime = 1543820400000;
+const intervalTime = 600000;
+
 async function getTotaProxyNo1() {
   const { stdout, stderr } = await exec('docker exec -i eosioReal /opt/eosio/bin/cleos --wallet-url http://localhost:9999 -u https://rpc.eosys.io get account totaproxyno1 -j');
 	return JSON.parse(`${stdout}`).voter_info.producers;
@@ -19,7 +22,7 @@ async function getProducerList() {
 
 async function unlockWallet2() {
   try {
-    const { stdout1, stderr1 } = await exec(`docker exec -i eosioJungle /opt/eosio/bin/cleos --wallet-url http://localhost:9090 -u https://jungle2.cryptolions.io wallet unlock --name default --password ${process.env.PASSWORD}`);
+    const { stdout1, stderr1 } = await exec(`docker exec -i eosioJungle /opt/eosio/bin/cleos --wallet-url http://localhost:9090 -u https://jungle2.cryptolions.io wallet unlock --name default --password ${process.env.PASSWORD_JUNGLE}`);
     console.log(stdout1);
     console.log(stderr1);
   } catch(e) {
@@ -27,14 +30,26 @@ async function unlockWallet2() {
   }
 }
 
-async function pushResult2(side) {
- const { stdout2, stderr2 } = await exec(`docker exec -i eosioJungle /opt/eosio/bin/cleos --wallet-url http://localhost:9090 -u https://jungle2.cryptolions.io push action totatestgame pushresult '["totatestgame", 2, ${side}]' -p totatestgame@active`);
+async function pushResult2(gameNumber, side) {
+ const { stdout2, stderr2 } = await exec(`docker exec -i eosioJungle /opt/eosio/bin/cleos --wallet-url http://localhost:9090 -u https://jungle2.cryptolions.io push action totatestgame pushresult '["totatestgame", ${gameNumber + 5}, ${side}]' -p totatestgame@active`);
   console.log(stdout2);
   console.log(stderr2); 
 }
 
 async function pushNewGame2() {
+  const startTime = 1543820400000;
+  const intervalTime = 600000;
 
+  const gameNumber = Math.round((new Date().getTime() - startTime) / (6 * intervalTime));
+  const { stdout, stderr } = await exec(`docker exec -i eosioJungle /opt/eosio/bin/cleos --wallet-url http://localhost:9090 -u https://jungle2.cryptolions.io push action totatestgame insertgame '["totatestgame", "game5", 0, ${startTime + gameNumber * intervalTime * 6}, ${startTime + gameNumber * intervalTime * 6 + intervalTime * 5}, ${startTime + (gameNumber + 1) * intervalTime * 6}, "totaproxyno1", "totaproxyno2"]' -p totatestgame@active`);
+  
+}
+
+function getGameNumber() {
+  const startTime = 1543820400000;
+  const intervalTime = 600000;
+
+  return Math.round((new Date().getTime() - startTime) / (6 * intervalTime));
 }
 
 async function result() {
@@ -56,9 +71,11 @@ async function result() {
   console.log(count1);
   console.log(count2);
   unlockWallet2();
-  if(count1 > count2) pushResult2(1);
-  else if(count2 > count1) pushResult2(2);
-  else pushResult2(3);
+  if(count1 > count2) pushResult2(getGameNumber(), 1);
+  else if(count2 > count1) pushResult2(getGameNumber(), 2);
+  else pushResult2(getGameNumber(), 3);
+
+  pushNewGame2();
 }
 
 result();
