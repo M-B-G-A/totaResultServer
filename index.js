@@ -30,9 +30,11 @@ async function unlockWallet2() {
 async function pushResult2(side) {
  const { stdout2, stderr2 } = await exec(`docker exec -i eosioJungle /opt/eosio/bin/cleos --wallet-url http://localhost:9090 -u https://jungle2.cryptolions.io push action totatestgame pushresult '["totatestgame", 2, ${side}]' -p totatestgame@active`);
   console.log(stdout2);
-  console.log(stderr2);
-  
- 
+  console.log(stderr2); 
+}
+
+async function pushNewGame2() {
+
 }
 
 async function result() {
