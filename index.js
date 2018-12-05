@@ -2,7 +2,7 @@ const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 require('dotenv').config();
 
-const startTime = 1543935600000;
+const startTime = 1544025600000;
 const intervalTime = 300000;
 
 async function getTotaProxyNo1() {
@@ -54,7 +54,7 @@ async function pushNewGame2(gameNumber) {
       --wallet-url http://localhost:9090 \
       -u https://jungle2.cryptolions.io \
       push action totatestgame insertgame \
-      '["totatestgame", "game${gameNumber+2}", 0, ${startTime + gameNumber * intervalTime * 6},
+      '["totatestgame", "game${gameNumber}", 0, ${startTime + gameNumber * intervalTime * 6},
       ${startTime + gameNumber * intervalTime * 6 + intervalTime * 5},
       ${startTime + (gameNumber + 1) * intervalTime * 6}, "totaproxyno1", "totaproxyno2"]' \
       -p totatestgame@active`);
@@ -63,7 +63,7 @@ async function pushNewGame2(gameNumber) {
 }
 
 function getGameNumber() {
-  return Math.round((new Date().getTime() - startTime) / (6 * intervalTime)) + 2;
+  return Math.round((new Date().getTime() - startTime) / (6 * intervalTime));
 }
 
 async function communicate() {
@@ -90,7 +90,6 @@ async function communicate() {
   if(count1 > count2) await pushResult2(gn, 1);
   else if(count2 > count1) await pushResult2(gn, 2);
   else await pushResult2(gn, 3);
-  gn -= 2;
   await pushNewGame2(gn);
 }
 
