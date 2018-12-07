@@ -1,6 +1,6 @@
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
-require('dotenv').config();
+const env = require('./env');
 
 const startTime = 1544025600000;
 const intervalTime = 300000;
@@ -31,7 +31,7 @@ async function unlockWallet2() {
     const { stdout, stderr } = await exec(`docker exec -i eosioJungle /opt/eosio/bin/cleos \
         --wallet-url http://localhost:9090 \
         -u https://jungle2.cryptolions.io wallet unlock \
-        --name default --password ${process.env.PASSWORD_JUNGLE}`);
+        --name default --password ${env.junglePWD}`);
     console.log(stdout);
     console.log(stderr);
   } catch(e) {
