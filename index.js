@@ -55,7 +55,7 @@ async function pushNewGame2(gameNumber) {
       -u https://jungle2.cryptolions.io \
       push action totatestgame insertgame \
       '["totatestgame", "game${gameNumber}", 0, ${startTime + gameNumber * intervalTime * 6},
-      ${startTime + gameNumber * intervalTime * 6 + intervalTime * 5},
+      ${startTime + gameNumber * intervalTime * 6 + intervalTime * 6},
       ${startTime + (gameNumber + 1) * intervalTime * 6}, "totaproxyno1", "totaproxyno2"]' \
       -p totatestgame@active`);
   console.log("push game stdout: ", stdout);
