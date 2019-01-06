@@ -5,9 +5,6 @@ import { TextEncoder, TextDecoder } from 'util';
 import env from './env';
 import JsSignatureProvider from 'eosjs/dist/eosjs-jssig';
 
-
-const startTime = 1544025600000;
-const intervalTime = 300000;
 const junglePrivateKey = env.junglePrivateKey;
 const eosPrivateKey = env.eosPrivateKey;
 
@@ -17,8 +14,8 @@ const eosSP = new JsSignatureProvider([eosPrivateKey]);
 const jungleRPC = new JsonRpc('https://jungle2.cryptolions.io:443', { fetch });
 const eosRPC = new JsonRpc('https://rpc.eosys.io', { fetch });
 
-const jungleApi = new Api({ jungleRPC, jungleSP, textDecoder: new TextDecoder(), textEncoder: new TextEncoder() });
-const eosApi = new Api({ eosRPC, eosSP, textDecoder: new TextDecoder(), textEncoder: new TextEncoder() });
+const jungleApi = new Api({ rpc: jungleRPC, signatureProvider: jungleSP, textDecoder: new TextDecoder(), textEncoder: new TextEncoder() });
+const eosApi = new Api({ rpc: eosRPC, signatureProvider: eosSP, textDecoder: new TextDecoder(), textEncoder: new TextEncoder() });
 
 const isMainnet = false;
 
@@ -62,7 +59,7 @@ async function getCurrentProducers() {
     }
 }
 
-async function getRestGames() {
+async function getLastGames() {
     try {
         const rpc = (isMainnet == true) ? eosRPC : jungleRPC; 
         const gameInfos = await rpc.get_table_rows({ 
@@ -82,7 +79,7 @@ async function getRestGames() {
         }
         return { last: lastGameKey, games: res };
     } catch(e) {
-        console.log('getRestGames error', e);
+        console.log('getLastGames error', e);
         throw e;
     }
 }
@@ -93,12 +90,12 @@ function calculateResult(game, voteProducers, proxyNo1, proxyNo2) {
             let count1 = 0;
             let count2 = 0;
 
-            for(let producer of producerList) {
-                if(proxyNo1.indexOf(voteProducers) != -1){
-                count1 += 1;  
+            for(let producer of voteProducers) {
+                if(proxyNo1.indexOf(producer) != -1){
+                    count1 += 1;  
                 }
-                if(proxyNo2.indexOf(voteProducers) != -1){
-                count2 += 1;
+                if(proxyNo2.indexOf(producer) != -1){
+                    count2 += 1;
                 }
             }
             if(count1 > count2) return { key: game.key, result: 1 };
@@ -110,23 +107,26 @@ function calculateResult(game, voteProducers, proxyNo1, proxyNo2) {
     }
 }
 
-async function pushResult(result) {
+async function pushResult(gameResult) {
     try {
         const api = (isMainnet == true) ? eosApi : jungleApi;
-        const result = api.transact({
+        const result = await api.transact({
             actions: [{
                 account: 'totatestgame',
                 name: 'pushresult',
                 authorization: [{
                     actor: 'totatestgame',
-                    permission: 'active',
+                    permission: 'owner',
                 }],
                 data: {
                     user: 'totatestgame',
-                    game_key: result.key,
-                    result: result.result,
+                    game_key: gameResult.key,
+                    result: gameResult.result,
                 },
             }]
+        }, {
+            blocksBehind: 3,
+            expireSeconds: 30,
         });
         console.log(result);
         return result;
@@ -142,13 +142,13 @@ async function makeNewGame(lastNumber) {
         const startTime = new Date('Sun Jan 06 2019 00:00:00 GMT+0900').getTime() + 86400000 * num;
         const resultTime = new Date('Sun Jan 06 2019 00:00:00 GMT+0900').getTime() + 86400000 * (num + 1);
         const endTime = startTime + 64800000;
-        const result = api.transact({
+        const result = await api.transact({
             actions: [{
                 account: 'totatestgame',
                 name: 'insertgame',
                 authorization: [{
                     actor: 'totatestgame',
-                    permission: 'active',
+                    permission: 'owner',
                 }],
                 data: {
                     user: 'totatestgame',
@@ -161,6 +161,9 @@ async function makeNewGame(lastNumber) {
                     team2 : 'totaproxyno2',
                 },
             }]
+        }, {
+            blocksBehind: 3,
+            expireSeconds: 30,
         });
         console.log(result);
         return result;
@@ -168,3 +171,24 @@ async function makeNewGame(lastNumber) {
         throw err;
     }
 }
+
+async function tryPushAndMakeGame() {
+    try {
+        const proxyNo1 = await getProxyNo1();
+        const proxyNo2 = await getProxyNo2();
+        const producerList = await getCurrentProducers();
+        const lastGames = await getLastGames();
+        let pushRequest;
+        for (const game of lastGames.games) {
+            const gameResult = calculateResult(game, producerList, proxyNo1, proxyNo2);
+            console.log(gameResult);
+            pushRequest = await pushResult(gameResult);
+        }
+        const makeRequest = await makeNewGame(lastGames.lastGameKey);
+        console.log(pushRequest, makeRequest);
+    } catch (err) {
+        console.log(err);
+    }
+}
+
+tryPushAndMakeGame();
