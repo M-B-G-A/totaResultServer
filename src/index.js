@@ -3,11 +3,9 @@ import JsSignature from 'eosjs/dist/eosjs-jssig';
 import fetch from 'node-fetch';                            // node only; not needed in browsers
 import { TextEncoder, TextDecoder } from 'util'; 
 import JsSignatureProvider from 'eosjs/dist/eosjs-jssig';
-import storage from 'node-persist';
 import env from './env';
 
-storage.initSync();
-
+const storage = require('node-persist');
 const junglePrivateKey = env.junglePrivateKey;
 const eosPrivateKey = env.eosPrivateKey;
 
@@ -87,7 +85,7 @@ async function getLastGames() {
     }
 }
 
-function calculateResult(game, voteProducers, proxyNo1, proxyNo2) {
+async function calculateResult(game, voteProducers, proxyNo1, proxyNo2) {
     try {
         let prevCount1 = 0;
         let prevCount2 = 0;
@@ -218,4 +216,9 @@ async function tryPushAndMakeGame() {
     }
 }
 
-tryPushAndMakeGame();
+storage.init().then(res => {
+  console.log(new Date());
+  tryPushAndMakeGame();
+  storage.getItem('currentResult').then(r => console.log(r));
+});
+//tryPushAndMakeGame();
