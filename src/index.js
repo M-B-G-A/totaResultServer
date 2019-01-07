@@ -2,8 +2,11 @@ import { Api, JsonRpc, RpcError } from 'eosjs';
 import JsSignature from 'eosjs/dist/eosjs-jssig';
 import fetch from 'node-fetch';                            // node only; not needed in browsers
 import { TextEncoder, TextDecoder } from 'util'; 
-import env from './env';
 import JsSignatureProvider from 'eosjs/dist/eosjs-jssig';
+import storage from 'node-persist';
+import env from './env';
+
+storage.initSync();
 
 const junglePrivateKey = env.junglePrivateKey;
 const eosPrivateKey = env.eosPrivateKey;
@@ -86,20 +89,44 @@ async function getLastGames() {
 
 function calculateResult(game, voteProducers, proxyNo1, proxyNo2) {
     try {
-        if (game.game_type === 0) {
-            let count1 = 0;
-            let count2 = 0;
+        let prevCount1 = 0;
+        let prevCount2 = 0;
+        let count1 = 0;
+        let count2 = 0;
 
+        const currentResult = await storage.getItem('currentResult');
+        if (currentResult.timestamp === game.result_time) {
+            const prevResult = await storage.getItem('prevResult');
+            prevCount1 = prevResult.count1;
+            prevCount2 = prevResult.count2;
+            count1 = currentResult.count1;
+            count2 = currentResult.count2;
+        } else {
+            await storage.setItem('prevResult', currentResult);
+            prevCount1 = currentResult.count1;
+            prevCount2 = currentResult.count2;
             for(let producer of voteProducers) {
                 if(proxyNo1.indexOf(producer) != -1){
-                    count1 += 1;  
+                    count1 += 1;
                 }
                 if(proxyNo2.indexOf(producer) != -1){
                     count2 += 1;
                 }
             }
+            await storage.setItem('currentResult', { 
+                count1: count1,
+                count2: count2,
+                timestamp: game.result_time,
+            });
+        }
+
+        if (game.game_type === 0) {
             if(count1 > count2) return { key: game.key, result: 1 };
             else if(count2 > count1) return { key: game.key, result: 2 };
+            else return { key: game.key, result: 3 };
+        } else if (game.game_type === 1) {
+            if(count1 > prevCount1) return { key: game.key, result: 1 };
+            else if(count2 > prevCount2) return { key: game.key, result: 2 };
             else return { key: game.key, result: 3 };
         }
     } catch (err) {
@@ -152,7 +179,7 @@ async function makeNewGame(lastNumber) {
                 }],
                 data: {
                     user: 'totatestgame',
-                    game_name: `who win ${lastNumber + 1}`,
+                    game_name: `who win ${num + 1}`,
                     game_type: 0, // 0은 누가 더 많은지 
                     start_time: startTime,
                     end_time: endTime,

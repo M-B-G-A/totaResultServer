@@ -13,7 +13,8 @@
   "dependencies": {
     "dotenv": "^6.1.0",
     "eosjs": "^20.0.0-beta3",
-    "node-fetch": "^2.3.0"
+    "node-fetch": "^2.3.0",
+    "node-persist": "^3.0.2"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
