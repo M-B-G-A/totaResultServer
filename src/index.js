@@ -205,7 +205,7 @@ async function tryPushAndMakeGame() {
         const lastGames = await getLastGames();
         let pushRequest;
         for (const game of lastGames.games) {
-            const gameResult = calculateResult(game, producerList, proxyNo1, proxyNo2);
+            const gameResult = await calculateResult(game, producerList, proxyNo1, proxyNo2);
             console.log(gameResult);
             pushRequest = await pushResult(gameResult);
         }
