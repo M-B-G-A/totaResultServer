@@ -3,6 +3,7 @@ import JsSignature from 'eosjs/dist/eosjs-jssig';
 import fetch from 'node-fetch';                            // node only; not needed in browsers
 import { TextEncoder, TextDecoder } from 'util'; 
 import JsSignatureProvider from 'eosjs/dist/eosjs-jssig';
+import path from 'path';
 import env from './env';
 
 const storage = require('node-persist');
@@ -93,16 +94,25 @@ async function calculateResult(game, voteProducers, proxyNo1, proxyNo2) {
         let count2 = 0;
 
         const currentResult = await storage.getItem('currentResult');
-        if (currentResult.timestamp === game.result_time) {
+        if (game.result_time > new Date()) return false;
+        if (currentResult != void 0 && currentResult.timestamp != void 0 && currentResult.timestamp === game.result_time) {
             const prevResult = await storage.getItem('prevResult');
-            prevCount1 = prevResult.count1;
-            prevCount2 = prevResult.count2;
+            if (prevResult === void 0) {
+              await storage.setItem('prevResult', currentResult);
+              prevCount1 = currentResult.count1;
+              prevCount2 = currentResult.count2;
+            } else {
+              prevCount1 = prevResult.count1;
+              prevCount2 = prevResult.count2;
+            }
             count1 = currentResult.count1;
             count2 = currentResult.count2;
         } else {
-            await storage.setItem('prevResult', currentResult);
-            prevCount1 = currentResult.count1;
-            prevCount2 = currentResult.count2;
+            if (currentResult != void 0) {
+              await storage.setItem('prevResult', currentResult);
+              prevCount1 = currentResult.count1;
+              prevCount2 = currentResult.count2;
+            }
             for(let producer of voteProducers) {
                 if(proxyNo1.indexOf(producer) != -1){
                     count1 += 1;
@@ -117,7 +127,8 @@ async function calculateResult(game, voteProducers, proxyNo1, proxyNo2) {
                 timestamp: game.result_time,
             });
         }
-
+        console.log('Current', count1, count2);
+        console.log('Prev', prevCount1, prevCount2);
         if (game.game_type === 0) {
             if(count1 > count2) return { key: game.key, result: 1 };
             else if(count2 > count1) return { key: game.key, result: 2 };
@@ -206,17 +217,19 @@ async function tryPushAndMakeGame() {
         let pushRequest;
         for (const game of lastGames.games) {
             const gameResult = await calculateResult(game, producerList, proxyNo1, proxyNo2);
-            console.log(gameResult);
-            pushRequest = await pushResult(gameResult);
+            if (gameResult) { 
+              pushRequest = await pushResult(gameResult);
+              console.log('pushresult', pushRequest);
+            }
         }
         const makeRequest = await makeNewGame(lastGames.lastGameKey);
-        console.log(pushRequest, makeRequest);
+        console.log('insertgame', makeRequest);
     } catch (err) {
         console.log(err);
     }
 }
-
-storage.init().then(res => {
+//console.log(path.resolve(__dirname));
+storage.init({ /*dir: path.resolve(__dirname) + '/.storage',*/ttl: 96 * 3600 * 1000 }).then(res => {
   console.log(new Date());
   tryPushAndMakeGame();
   storage.getItem('currentResult').then(r => console.log(r));
